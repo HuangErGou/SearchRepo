@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Type, List, Dict
 
 from langchain import hub
 from langchain_core.tools import BaseTool
@@ -44,8 +44,31 @@ class SearchTool(BaseTool):
         return execute_command(command)
 
 
+class SummaryInput(BaseModel):
+    repo: List[str] = Field(description="仓库的名字列表")
+
+
+class GetSummaryTool(BaseTool):
+    name = "GetSummaryTool"
+    description = "读取github 仓库摘要"
+    args_schema: Type[BaseModel] = SummaryInput
+
+    def _run(self, repo: List[str]) -> Dict[str, str]:
+        """Use the tool."""
+        print(f"call function summary {repo}")
+        the_first = True
+        rtn = {}
+        for word in repo:
+            if the_first:
+                rtn[word] = "用langchain实现了界面画图的功能"
+                the_first = False
+            else:
+                rtn[word] = "这是一个用c++实现的USB协议"
+        return rtn
+
+
 prompt = hub.pull("hwchase17/openai-tools-agent")
-tools = [SearchTool()]
+tools = [SearchTool(), GetSummaryTool()]
 
 llm = NagasenaLLM(temperature=0)
 agent = create_openai_tools_agent(llm=llm, tools=tools, prompt=prompt)
@@ -57,7 +80,7 @@ prompt = f"github client 搜索仓库的例子如下：\n \
           $ gh search repos cli shell \n \
           # search repositories matching phrase \"vim plugin\" \n \
           $ gh search repos \"vim plugin\"\n \" \
-          请参考这些例子生成搜索命令，调用命令执行工具去找{search_input}相关的仓库"
+          请参考这些例子生成搜索命令，调用命令执行工具去找{search_input}相关的仓库, 调用工具读取仓库的摘要, 然后给出判断那个仓库最符合搜索要求"
 
 response = agent_executor.invoke(
     {
