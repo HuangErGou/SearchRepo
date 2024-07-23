@@ -1,4 +1,7 @@
 import os
+import shlex
+import subprocess
+from typing import List
 
 from langchain import hub
 from langchain.agents import create_openai_tools_agent, AgentExecutor
@@ -7,6 +10,36 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
 from LLM.NagasenaLLM import NagasenaLLM
+
+gb_command = ""
+
+
+class GithubSearchItem:
+    def __init__(self, name: str, description: str, visibility: str, update: str):
+        self.name = name
+        self.description = description
+        self.visibility = visibility
+        self.update = update
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'description': self.description,
+            'visibility': self.visibility,
+            'update': self.update
+        }
+
+    def __str__(self):
+        return (f"GithubSearchItem(name={self.name!r}, "
+                f"description={self.description!r}, "
+                f"visibility={self.visibility!r}, "
+                f"update={self.update!r})")
+
+    def __repr__(self):
+        return (f"GithubSearchItem(name={self.name!r}, "
+                f"description={self.description!r}, "
+                f"visibility={self.visibility!r}, "
+                f"update={self.update!r})")
 
 
 class GeneratedCommandInput(BaseModel):
@@ -19,6 +52,8 @@ class GeneratedCommand(BaseTool):
 
     def _run(self, command: str):
         print(command)
+        global gb_command
+        gb_command = command
 
 
 class SearchCmdGenerateAgent:
@@ -39,7 +74,45 @@ class SearchCmdGenerateAgent:
             content = file.read()
         return content
 
+    @staticmethod
+    def execute_command(command_str: str) -> List[GithubSearchItem]:
+        items = []
+
+        command = shlex.split(command_str)
+
+        # 现在command是一个列表，包含了命令和参数
+        print(command)
+        # 使用subprocess.run()执行命令
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=True, errors="ignore")
+            output = result.stdout
+
+            lines = output.strip().split('\n')
+            for line in lines:
+                if line.strip():
+                    parts = line.split("\t")
+                    if len(parts) == 4:
+                        name = parts[0].strip()
+                        description = parts[1].strip()
+                        visibility = parts[2].strip()
+                        updated = parts[3].strip()
+
+                        items.append(
+                            GithubSearchItem(
+                                name=name,
+                                description=description,
+                                visibility=visibility,
+                                update=updated))
+            return items
+        except subprocess.CalledProcessError as e:
+
+            print("An error occurred while executing the command.")
+            print(e)
+
     def generate(self, search_request: str) -> str:
+        global gb_command
+        gb_command = ""
+
         input_prompt = (f"你是一个github 搜索助手，下面是github client命令行搜索范例\n"
                         f"{SearchCmdGenerateAgent.__get_search_sample()} \n"
                         f"请参考范例，生成 \"{search_request}\"的搜索指令，并调用接口输出")
@@ -48,15 +121,12 @@ class SearchCmdGenerateAgent:
                 "input": input_prompt
             }
         )
-        return ""
+        return gb_command
 
 
 if __name__ == "__main__":
     llm = NagasenaLLM(temperature=0)
     agent = SearchCmdGenerateAgent(llm)
-    agent.generate(search_request="C++开发的响应式编程的仓库")
-
-
-
-
-
+    the_command = agent.generate(search_request="rust开发的的响应式的编程框架的仓库")
+    response = agent.execute_command(the_command)
+    print(response)
