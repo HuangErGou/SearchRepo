@@ -1,0 +1,7 @@
+Search for repositories on GitHub.
+EXAMPLES
+  # search repositories matching set of keywords "cli" and "shell"
+  gh search repos cli shell
+
+  # search repositories matching set of keywords "cli" and "shell" by coding language and number of good first issues
+  gh search repos cli shell --language=go --good-first-issues=">=10"
