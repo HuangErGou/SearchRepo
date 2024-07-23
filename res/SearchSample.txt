@@ -1,0 +1,43 @@
+Search within code in GitHub repositories.
+
+EXAMPLES
+  # search code matching "react" and "lifecycle"
+  $ gh search code react lifecycle
+
+  # search code matching "error handling"
+  $ gh search code "error handling"
+
+  # search code matching "deque" in Python files
+  $ gh search code deque --language=python
+
+  # search code matching "cli" in repositories owned by microsoft organization
+  $ gh search code cli --owner=microsoft
+
+  # search code matching "panic" in the GitHub CLI repository
+  $ gh search code panic --repo cli/cli
+
+  # search code matching keyword "lint" in package.json files
+  $ gh search code lint --filename package.json
+
+Search for repositories on GitHub.
+EXAMPLES
+  # search repositories matching set of keywords "cli" and "shell"
+  $ gh search repos cli shell
+
+  # search repositories matching phrase "vim plugin"
+  $ gh search repos "vim plugin"
+
+  # search repositories public repos in the microsoft organization
+  $ gh search repos --owner=microsoft --visibility=public
+
+  # search repositories with a set of topics
+  $ gh search repos --topic=unix,terminal
+
+  # search repositories by coding language and number of good first issues
+  $ gh search repos --language=go --good-first-issues=">=10"
+
+  # search repositories without topic "linux"
+  $ gh search repos -- -topic:linux
+
+  # search repositories excluding archived repositories
+  $ gh search repos --archived=false
