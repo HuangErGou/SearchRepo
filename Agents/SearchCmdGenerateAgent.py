@@ -1,7 +1,7 @@
 import os
 import shlex
 import subprocess
-from typing import List
+from typing import List, Dict, Type, Optional
 
 from langchain import hub
 from langchain.agents import create_openai_tools_agent, AgentExecutor
@@ -21,13 +21,18 @@ class GithubSearchItem:
         self.visibility = visibility
         self.update = update
 
-    def to_dict(self):
+    def to_dict(self) -> Dict:
         return {
             'name': self.name,
             'description': self.description,
             'visibility': self.visibility,
             'update': self.update
         }
+
+    def to_filename(self) -> str:
+        readme_filename = self.name
+        readme_filename = readme_filename.replace("/", "_") + ".md"
+        return readme_filename
 
     def __str__(self):
         return (f"GithubSearchItem(name={self.name!r}, "
@@ -43,17 +48,25 @@ class GithubSearchItem:
 
 
 class GeneratedCommandInput(BaseModel):
-    command: str = Field(description="生成的命令")
+    keywords: str = Field(description="关键字")
+    language: str = Field(description="编程语言")
 
 
 class GeneratedCommand(BaseTool):
     name = "GeneratedCommand"
-    description = "输出生成的命令"
+    description = "输出关键词和编程语言"
+    args_schema: Type[BaseModel] = GeneratedCommandInput
 
-    def _run(self, command: str):
-        print(command)
+    def _run(self, keywords: str, language: str) -> str:
         global gb_command
-        gb_command = command
+        gb_command = ""
+        print(keywords)
+        print(language)
+        if len(language) > 0:
+            gb_command = f"gh search repos {keywords} --language={language}"
+        else:
+            gb_command = f"gh search repos {keywords}"
+        return gb_command
 
 
 class SearchCmdGenerateAgent:
@@ -87,8 +100,8 @@ class SearchCmdGenerateAgent:
                 # 检查命令是否执行成功
                 if result.returncode == 0:
                     # 将输出保存到文件
-                    readme_filename = repo.name
-                    readme_filename = readme_filename.replace("/", "_") + ".md"
+                    readme_filename = repo.to_filename()
+                    # readme_filename = readme_filename.replace("/", "_") + ".md"
                     readme_path = os.path.join(store_dir, readme_filename)
                     with open(readme_path, 'w', encoding="utf-8", errors="ignore") as file:
                         file.write(result.stdout)
@@ -140,9 +153,7 @@ class SearchCmdGenerateAgent:
         global gb_command
         gb_command = ""
 
-        input_prompt = (f"你是一个github 搜索助手，下面是github client命令行搜索范例\n"
-                        f"{SearchCmdGenerateAgent.__get_search_sample()} \n"
-                        f"请参考范例，生成 \"{search_request}\"的搜索指令，并调用接口输出")
+        input_prompt = f"你是一个github 搜索助手，生成 \"{search_request}\" 搜索请求的仓库的英文关键字和编程语言类型,如果没有指定相关内容，就给空字符串,然后调用工具输出命令"
         self.__agent_executor.invoke(
             {
                 "input": input_prompt
@@ -154,7 +165,7 @@ class SearchCmdGenerateAgent:
 if __name__ == "__main__":
     llm = NagasenaLLM(temperature=0)
     agent = SearchCmdGenerateAgent(llm)
-    the_command = agent.generate(search_request="rust开发的的响应式的编程框架的仓库")
-    repos = agent.execute_command(the_command)
-    agent.download_readme(repos, "D:\\tmp")
-    print(repos)
+    the_command = agent.generate(search_request="响应式编程框架")
+    _repos = agent.execute_command(the_command)
+    agent.download_readme(_repos, "D:\\tmp")
+    print(_repos)
