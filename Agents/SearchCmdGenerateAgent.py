@@ -75,6 +75,33 @@ class SearchCmdGenerateAgent:
         return content
 
     @staticmethod
+    def download_readme(repos: List[GithubSearchItem], store_dir: str):
+        command_template = "gh repo view {repo_name}"
+
+        for repo in repos:
+            try:
+                command = command_template.format(repo_name=repo.name)
+                result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                        text=True, encoding='utf-8', errors='ignore')
+
+                # 检查命令是否执行成功
+                if result.returncode == 0:
+                    # 将输出保存到文件
+                    readme_filename = repo.name
+                    readme_filename = readme_filename.replace("/", "_") + ".md"
+                    readme_path = os.path.join(store_dir, readme_filename)
+                    with open(readme_path, 'w', encoding="utf-8", errors="ignore") as file:
+                        file.write(result.stdout)
+                    print(f"命令执行成功，输出已保存到{readme_path}")
+                else:
+                    # 打印错误信息
+                    print(f"命令执行失败，错误信息: {result.stderr}")
+            except subprocess.CalledProcessError as e:
+                print(f"命令执行过程中发生错误: {e}")
+            pass
+        pass
+
+    @staticmethod
     def execute_command(command_str: str) -> List[GithubSearchItem]:
         items = []
 
@@ -128,5 +155,6 @@ if __name__ == "__main__":
     llm = NagasenaLLM(temperature=0)
     agent = SearchCmdGenerateAgent(llm)
     the_command = agent.generate(search_request="rust开发的的响应式的编程框架的仓库")
-    response = agent.execute_command(the_command)
-    print(response)
+    repos = agent.execute_command(the_command)
+    agent.download_readme(repos, "D:\\tmp")
+    print(repos)
