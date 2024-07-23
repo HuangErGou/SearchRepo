@@ -1,4 +1,5 @@
 import os
+import re
 import shlex
 import subprocess
 from typing import List, Dict, Type, Optional
@@ -62,10 +63,13 @@ class GeneratedCommand(BaseTool):
         gb_command = ""
         print(keywords)
         print(language)
+        keywords = re.sub(r'[^\w\s]', '', keywords)
+        # keywords = keywords.replace("\'", " ")
+
         if len(language) > 0:
-            gb_command = f"gh search repos {keywords} --language={language}"
+            gb_command = f"gh search repos {keywords} --language={language} --sort stars"
         else:
-            gb_command = f"gh search repos {keywords}"
+            gb_command = f"gh search repos {keywords} --sort stars"
         return gb_command
 
 
@@ -153,7 +157,9 @@ class SearchCmdGenerateAgent:
         global gb_command
         gb_command = ""
 
-        input_prompt = f"你是一个github 搜索助手，生成 \"{search_request}\" 搜索请求的仓库的英文关键字和编程语言类型,如果没有指定相关内容，就给空字符串,然后调用工具输出命令"
+        input_prompt = (f"你是一个github 搜索助手，"
+                        f"你先翻译搜索请求 \"搜索 {search_request}\" 成英文，"
+                        f"从翻译后的文字中, 提取搜索关键字和编程语言类型,如果没有指定相关内容，就给空字符串,搜索关键字不能有标点符号，然后调用工具输出命令")
         self.__agent_executor.invoke(
             {
                 "input": input_prompt

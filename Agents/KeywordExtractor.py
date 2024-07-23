@@ -13,7 +13,7 @@ class GeneratedKeywordsInput(BaseModel):
     keywords: str = Field(description="关键字")
 
 
-gb_keywords = []
+gb_keywords = ""
 
 
 class GeneratedKeywords(BaseTool):
@@ -21,7 +21,7 @@ class GeneratedKeywords(BaseTool):
     description = "输出生成的关键字列表"
     args_schema: Type[BaseModel] = GeneratedKeywordsInput
 
-    def _run(self, keywords: List[str]):
+    def _run(self, keywords: str):
         global gb_keywords
         gb_keywords = keywords
         print(keywords)
@@ -38,7 +38,7 @@ class KeywordsGenerateAgent:
 
     def generate(self, search_request: str) -> str:
         global gb_keywords
-        gb_keywords = []
+        gb_keywords = ""
         input_prompt = (f"你是一个github搜索关键词提取器，"
                         f"第一步翻译 \"{search_request}\" 成英文,"
                         f"第二部从翻译后的文字中抽取关键字，关键词用空格隔开，调用接口输出关键词")
@@ -47,6 +47,8 @@ class KeywordsGenerateAgent:
                 "input": input_prompt
             }
         )
+        if len(gb_keywords) == 0:
+            gb_keywords = search_request
         return gb_keywords
 
 

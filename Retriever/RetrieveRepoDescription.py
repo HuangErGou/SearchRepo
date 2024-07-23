@@ -26,15 +26,17 @@ class RetrieveRepoDescription:
 
         md_header_splits = self.__markdown_splitter.split_text(content)
         text_splits = self.__text_splitter.split_documents(md_header_splits)
-        vectorstore = FAISS.from_documents(text_splits, self.__embeddings)
+        # vectorstore = FAISS.from_documents(text_splits, self.__embeddings)
         bm25_retriever = BM25Retriever.from_documents(text_splits)
-        bm25_retriever.k = 2
+        bm25_retriever.k = 4
 
-        faiss_retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
+        # faiss_retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
+        # ensemble_retriever = EnsembleRetriever(
+        #     retrievers=[bm25_retriever, faiss_retriever], weights=[0.5, 0.5]
+        # )
         ensemble_retriever = EnsembleRetriever(
-            retrievers=[bm25_retriever, faiss_retriever], weights=[0.5, 0.5]
+            retrievers=[bm25_retriever], weights=[1]
         )
-
         docs = ensemble_retriever.invoke(query)
         content = ""
         for doc in docs:
